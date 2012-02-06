@@ -17,7 +17,6 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 public class SlaveContext extends AbstractStartable<Integer> {
 	
 	private static final Log logger = LogFactory.getLog(SlaveContext.class);
-	ApplicationContext applicationContext;
 	private final String CONTEXT_PATH;
 	
 	SlaveContext(final String contextPath) {

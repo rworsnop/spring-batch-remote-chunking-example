@@ -1,5 +1,6 @@
 package com.opencredo.sandbox.gawain.springbatch.remote.chunking;
 
+import java.io.IOException;
 import java.util.concurrent.Callable;
 
 import org.apache.activemq.broker.BrokerService;
@@ -12,7 +13,6 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 public class BrokerContext extends AbstractStartable<Integer> {
 	
 	private static final Log logger = LogFactory.getLog(BrokerContext.class);
-	ApplicationContext applicationContext;
 	private final String CONTEXT_PATH;
 	
 	public BrokerContext(String contextPath) {

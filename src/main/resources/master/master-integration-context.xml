@@ -38,19 +38,10 @@
 	
 	<!-- Remote Chunking Replies From Slave -->
 	
-	<int-jms:inbound-channel-adapter id="jmsReplies" connection-factory="connectionFactory" destination-name="replies" channel="incoming" >
+	<int-jms:inbound-channel-adapter id="jmsReplies" connection-factory="connectionFactory" destination-name="replies" channel="replies" >
 		<integration:poller fixed-delay="200"></integration:poller>
 	</int-jms:inbound-channel-adapter>
 	
-	<integration:channel id="incoming">
-		  <integration:interceptors>
-	        <integration:wire-tap channel="loggingChannel"/>
-	    </integration:interceptors>
-	</integration:channel>	
-	
-		<integration:transformer input-channel="incoming" output-channel="replies" ref="headerExtractor" method="extract" />
-
-	<bean id="headerExtractor" class="org.springframework.batch.integration.chunk.JmsRedeliveredExtractor" />
 	
 	<integration:channel id="replies">
 		<integration:queue />

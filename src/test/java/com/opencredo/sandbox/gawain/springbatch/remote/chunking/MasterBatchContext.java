@@ -31,7 +31,7 @@ public class MasterBatchContext extends AbstractStartable<BatchStatus> {
 	private final String JOB_NAME;
 	private final String CONTEXT_PATH;
 	private BatchStatus batchStatus;
-	private ApplicationContext applicationContext;
+
 	
 	public MasterBatchContext(final String jobName, final String contextPath) {
 		this.JOB_NAME = jobName;
