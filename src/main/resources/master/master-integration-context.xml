@@ -32,44 +32,13 @@
 	</bean>
 
 
-
-	<integration:channel id="requests">
-        <integration:interceptors>
-            <integration:wire-tap channel="loggingOutChannel"/>
-        </integration:interceptors>
-    </integration:channel>
-
-    <int-amqp:outbound-channel-adapter channel="requests" amqp-template="amqpTemplate" exchange-name="batch.test.exchange" routing-key="request.binding"/>
-
-
-		
-
 	<!-- Remote Chunking Replies From Slave -->
-	
 
-    <int-amqp:inbound-channel-adapter channel="replies" queue-names="batch.test.replies" connection-factory="connectionFactory"/>
-
-    <integration:channel id="replies">
-        <integration:queue />
-        <integration:interceptors>
-            <integration:wire-tap channel="loggingChannel"/>
-        </integration:interceptors>
-    </integration:channel>
 
     <integration:logging-channel-adapter id="loggingChannel" level="ERROR" log-full-message="true" logger-name="masterloggerIn"/>
     <integration:logging-channel-adapter id="loggingOutChannel" level="ERROR" log-full-message="true" logger-name="masterloggerOut"/>
 
 	<!--task:executor id="poolExecutor" pool-size="5-10" queue-capacity="0" /-->
-
-    <rabbit:queue name="batch.test.queue" />
-    <rabbit:queue name="batch.test.replies" />
-
-    <rabbit:direct-exchange name="batch.test.exchange">
-        <rabbit:bindings>
-            <rabbit:binding queue="batch.test.queue" key="request.binding" />
-            <rabbit:binding queue="batch.test.replies"  key="replies.binding"/>
-        </rabbit:bindings>
-    </rabbit:direct-exchange>
 
     <integration:channel id="fromRabbit">
         <integration:queue/>
