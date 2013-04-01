@@ -6,53 +6,99 @@
 	xmlns:batch="http://www.springframework.org/schema/batch" 
 	xmlns:context="http://www.springframework.org/schema/context"
 	xmlns:task="http://www.springframework.org/schema/task"
-	xmlns:int-jms="http://www.springframework.org/schema/integration/jms" 
-	xsi:schemaLocation="http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.0.xsd
+    xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+     xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+
+    xsi:schemaLocation="http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
 		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd
 		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
 		http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.1.xsd
-		http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
-		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+		http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd
+		http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit.xsd">
 
 
 
-	<bean id="connectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory" >
-		<property name="brokerURL">
-			<value>tcp://localhost:61616</value>
-		</property>
-	</bean>
-	
-	<!-- Remote Chunking Requests (The Producing of Chunks) Integration Configuration -->
-	
-	<bean id="messagingGateway" class="org.springframework.integration.core.MessagingTemplate">
-		<property name="defaultChannel" ref="jmsRequests" />
+    <rabbit:connection-factory id="connectionFactory" />
+
+    <rabbit:template id="amqpTemplate" connection-factory="connectionFactory" exchange="si.test.exchange"/>
+
+    <!-- Remote Chunking Requests (The Producing of Chunks) Integration Configuration -->
+
+ 	<bean id="messagingGateway" class="org.springframework.integration.core.MessagingTemplate">
+		<property name="defaultChannel" ref="toRabbit" />
 		<property name="receiveTimeout" value="5000" />
-	</bean>	
-	
-	
-	 <integration:channel id="requests"/>
-	
-	<int-jms:outbound-channel-adapter connection-factory="connectionFactory" destination-name="requests" id="jmsRequests">
+	</bean>
+
+
+
+	<integration:channel id="requests">
+        <integration:interceptors>
+            <integration:wire-tap channel="loggingOutChannel"/>
+        </integration:interceptors>
+    </integration:channel>
+
+    <int-amqp:outbound-channel-adapter channel="requests" amqp-template="amqpTemplate" exchange-name="batch.test.exchange" routing-key="request.binding"/>
+
+
 		
-	</int-jms:outbound-channel-adapter>
-	
+
 	<!-- Remote Chunking Replies From Slave -->
 	
-	<int-jms:inbound-channel-adapter id="jmsReplies" connection-factory="connectionFactory" destination-name="replies" channel="replies" >
-		<integration:poller fixed-delay="200"></integration:poller>
-	</int-jms:inbound-channel-adapter>
-	
-	
-	<integration:channel id="replies">
-		<integration:queue />
-		  <integration:interceptors>
-	        <integration:wire-tap channel="loggingChannel"/>
-	    </integration:interceptors>
-	</integration:channel>	
-	
 
-	<integration:logging-channel-adapter id="loggingChannel" level="INFO" log-full-message="true"/>
-	
-	<task:executor id="poolExecutor" pool-size="5-10" queue-capacity="0" />
+    <int-amqp:inbound-channel-adapter channel="replies" queue-names="batch.test.replies" connection-factory="connectionFactory"/>
+
+    <integration:channel id="replies">
+        <integration:queue />
+        <integration:interceptors>
+            <integration:wire-tap channel="loggingChannel"/>
+        </integration:interceptors>
+    </integration:channel>
+
+    <integration:logging-channel-adapter id="loggingChannel" level="ERROR" log-full-message="true" logger-name="masterloggerIn"/>
+    <integration:logging-channel-adapter id="loggingOutChannel" level="ERROR" log-full-message="true" logger-name="masterloggerOut"/>
+
+	<!--task:executor id="poolExecutor" pool-size="5-10" queue-capacity="0" /-->
+
+    <rabbit:queue name="batch.test.queue" />
+    <rabbit:queue name="batch.test.replies" />
+
+    <rabbit:direct-exchange name="batch.test.exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="batch.test.queue" key="request.binding" />
+            <rabbit:binding queue="batch.test.replies"  key="replies.binding"/>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+    <integration:channel id="fromRabbit">
+        <integration:queue/>
+        <integration:interceptors>
+            <integration:wire-tap channel="loggingChannel"/>
+        </integration:interceptors>
+    </integration:channel>
+
+
+
+    <integration:channel id="toRabbit">
+        <integration:interceptors>
+            <integration:wire-tap channel="loggingOutChannel"/>
+        </integration:interceptors>
+    </integration:channel>
+
+    <int-amqp:outbound-channel-adapter channel="toRabbit" amqp-template="amqpTemplate" exchange-name="si.test.exchange" routing-key="si.test.binding"/>
+    <int-amqp:inbound-channel-adapter channel="fromRabbit" queue-names="si.test.queuex" connection-factory="connectionFactory" />
+
+    <rabbit:queue name="si.test.queue" />
+    <rabbit:queue name="si.test.queuex" />
+
+    <rabbit:direct-exchange name="si.test.exchange">
+        <rabbit:bindings>
+            <rabbit:binding queue="si.test.queue" key="si.test.binding" />
+            <rabbit:binding queue="si.test.queuex" key="si.test.bindingx" />
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+
 
 </beans>
