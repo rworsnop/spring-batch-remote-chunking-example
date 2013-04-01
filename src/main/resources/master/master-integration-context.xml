@@ -22,12 +22,12 @@
 
     <rabbit:connection-factory id="connectionFactory" />
 
-    <rabbit:template id="amqpTemplate" connection-factory="connectionFactory" exchange="si.test.exchange"/>
+    <rabbit:template id="amqpTemplate" connection-factory="connectionFactory" exchange="batch.test.exchange"/>
 
     <!-- Remote Chunking Requests (The Producing of Chunks) Integration Configuration -->
 
  	<bean id="messagingGateway" class="org.springframework.integration.core.MessagingTemplate">
-		<property name="defaultChannel" ref="toRabbit" />
+		<property name="defaultChannel" ref="requests" />
 		<property name="receiveTimeout" value="5000" />
 	</bean>
 
@@ -35,12 +35,12 @@
 	<!-- Remote Chunking Replies From Slave -->
 
 
-    <integration:logging-channel-adapter id="loggingChannel" level="ERROR" log-full-message="true" logger-name="masterloggerIn"/>
-    <integration:logging-channel-adapter id="loggingOutChannel" level="ERROR" log-full-message="true" logger-name="masterloggerOut"/>
+    <integration:logging-channel-adapter id="loggingChannel" level="DEBUG" log-full-message="true" logger-name="masterloggerIn"/>
+    <integration:logging-channel-adapter id="loggingOutChannel" level="DEBUG" log-full-message="true" logger-name="masterloggerOut"/>
 
 	<!--task:executor id="poolExecutor" pool-size="5-10" queue-capacity="0" /-->
 
-    <integration:channel id="fromRabbit">
+    <integration:channel id="replies">
         <integration:queue/>
         <integration:interceptors>
             <integration:wire-tap channel="loggingChannel"/>
@@ -49,25 +49,26 @@
 
 
 
-    <integration:channel id="toRabbit">
+    <integration:channel id="requests">
         <integration:interceptors>
             <integration:wire-tap channel="loggingOutChannel"/>
         </integration:interceptors>
     </integration:channel>
 
-    <int-amqp:outbound-channel-adapter channel="toRabbit" amqp-template="amqpTemplate" exchange-name="si.test.exchange" routing-key="si.test.binding"/>
-    <int-amqp:inbound-channel-adapter channel="fromRabbit" queue-names="si.test.queuex" connection-factory="connectionFactory" />
+    <int-amqp:outbound-channel-adapter channel="requests" amqp-template="amqpTemplate" exchange-name="batch.test.exchange" routing-key="batch.requests"/>
+    <int-amqp:inbound-channel-adapter channel="replies" queue-names="batch.replies" connection-factory="connectionFactory" />
 
-    <rabbit:queue name="si.test.queue" />
-    <rabbit:queue name="si.test.queuex" />
+    <rabbit:queue name="batch.requests" />
+    <rabbit:queue name="batch.replies" />
 
-    <rabbit:direct-exchange name="si.test.exchange">
+    <rabbit:direct-exchange name="batch.test.exchange">
         <rabbit:bindings>
-            <rabbit:binding queue="si.test.queue" key="si.test.binding" />
-            <rabbit:binding queue="si.test.queuex" key="si.test.bindingx" />
+            <rabbit:binding queue="batch.requests" key="batch.requests" />
+            <rabbit:binding queue="batch.replies" key="batch.replies" />
         </rabbit:bindings>
     </rabbit:direct-exchange>
 
+    <rabbit:admin connection-factory="connectionFactory" />
 
 
 </beans>

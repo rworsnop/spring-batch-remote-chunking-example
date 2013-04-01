@@ -89,12 +89,12 @@
 
 	<bean id="chunkWriter" class="org.springframework.batch.integration.chunk.ChunkMessageChannelItemWriter" scope="step">
 		<property name="messagingOperations" ref="messagingGateway" />
-		<property name="replyChannel" ref="fromRabbit" />
+		<property name="replyChannel" ref="replies" />
 		<property name="throttleLimit" value="5" />
 		<property name="maxWaitTimeouts" value="30000" />
 	</bean>
 
-	<integration:service-activator input-channel="toRabbit" output-channel="fromRabbit" ref="chunkHandler" />
+	<integration:service-activator input-channel="requests" output-channel="replies" ref="chunkHandler" />
 
 	<bean id="chunkHandler" class="org.springframework.batch.integration.chunk.RemoteChunkHandlerFactoryBean">
 		<property name="chunkWriter" ref="chunkWriter" />
